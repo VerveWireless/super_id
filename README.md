@@ -1,4 +1,4 @@
-# EncodableIds
+# SuperId
 
 TODO: Write a gem description
 
@@ -7,7 +7,7 @@ TODO: Write a gem description
 Add this line to your application's Gemfile:
 
 ```ruby
-gem 'encodable_ids'
+gem 'super_id'
 ```
 
 And then execute:
@@ -16,11 +16,33 @@ And then execute:
 
 Or install it yourself as:
 
-    $ gem install encodable_ids
+    $ gem install super_id
 
 ## Usage
 
-TODO: Write usage instructions here
+In your model, you can use super id for the primary key
+
+```ruby
+# app/models/flock.rb
+
+class Seagull < ActiveRecord::Base
+  has_many :seagulls
+
+  use_super_id_for :id
+end
+```
+
+You can also use super id for foreign keys:
+
+```ruby
+# app/models/seagull.rb
+
+class Seagull < ActiveRecord::Base
+  belongs_to :flock
+
+  use_super_id_for [:id, :flock_id]
+end
+```
 
 ## Contributing
 
