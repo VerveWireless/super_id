@@ -1,4 +1,4 @@
 source 'https://rubygems.org'
 
-# Specify your gem's dependencies in encode_ids.gemspec
+# Specify your gem's dependencies in super_id.gemspec
 gemspec
