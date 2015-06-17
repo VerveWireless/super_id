@@ -13,75 +13,70 @@ module SuperId
       def use_super_id_for(id_name_or_names, options={})
         super_id_names = id_name_or_names.respond_to?(:each) ? id_name_or_names : [id_name_or_names]
         super_id_type = options.delete(:as) || :short_uid
-        
-        class_eval <<-METHODS
-          def self.super_id_names
-            #{super_id_names}
-          end
-        
-          def self.super_id_type
-            #{super_id_type}
-          end
-        
-          def self.super_id_options
-            #{options}
-          end
-          
-          # FIXME: should be dynamic based on super_id_type
-          def self.make_super(id, options)
-            if id
-              salt = options[:salt] || ''
-              SuperId::Types::IntAsShortUid.new(id.to_i, salt)
-            end
-          end
-          
-          # FIXME: should be dynamic based on super_id_type
-          def self.decode_super(str, options)
-            if str
-              SuperId::Types::IntAsShortUid.decode(str, options)
-            end
-          end
-          
-          def self.decode_super_ids(attributes={})
-            super_id_names.each do |super_id_name|
-              if attributes[super_id_name] && attributes[super_id_name].is_a?(String)
-                # FIXME: if the column is a foreign key, then use the super_id_options from the other class
-                #        otherwise, all the options has to be the same (ex: salt)
-                attributes[super_id_name] = decode_super(attributes[super_id_name], super_id_options)
-              end
-            end
-            attributes
-          end
-          
-          def self.create(attributes={}, options={}, &block)
-            super(decode_super_ids(attributes), options, &block)
-          end
-          
-          def initialize(attributes={}, options={})
-            super(self.class.decode_super_ids(attributes), options)
-          end
-          
-          def update(attributes)
-            super(self.class.decode_super_ids(attributes))
-          end
 
-          def assign_attributes(new_attributes)
-            super(self.class.decode_super_ids(new_attributes))
-          end
-        METHODS
-        
-        super_id_names.each do |id_name|
-          class_eval <<-METHODS
-            def #{id_name.to_s}
-              id = super
-              self.class.make_super(id.to_i, self.class.super_id_options) if id
-            end
-          METHODS
+        define_singleton_method('super_id_names') do
+          super_id_names
         end
-        
+
+        define_singleton_method('super_id_type') do
+          super_id_type
+        end
+
+        define_singleton_method('super_id_options') do
+          options
+        end
+
+        # FIXME: should be dynamic based on super_id_type
+        define_singleton_method('make_super') do |id, options|
+          if id
+            salt = options[:salt] || ''
+            SuperId::Types::IntAsShortUid.new(id.to_i, salt)
+          end
+        end
+        #
+        # FIXME: should be dynamic based on super_id_type
+        define_singleton_method('decode_super') do |str, options|
+          if str
+            SuperId::Types::IntAsShortUid.decode(str, options)
+          end
+        end
+
+        define_singleton_method('decode_super_ids') do |attributes={}|
+          super_id_names.each do |super_id_name|
+            if attributes[super_id_name] && attributes[super_id_name].is_a?(String)
+              # FIXME: if the column is a foreign key, then use the super_id_options from the other class
+              #        otherwise, all the options has to be the same (ex: salt)
+              attributes[super_id_name] = decode_super(attributes[super_id_name], super_id_options)
+            end
+          end
+          attributes
+        end
+
+        define_singleton_method('create') do |attributes={}, options={}, &block|
+          super(decode_super_ids(attributes), options, &block)
+        end
+
+        self.send(:define_method, 'update') do |attributes|
+          super(self.class.decode_super_ids(attributes))
+        end
+
+        self.send(:define_method, 'assign_attributes') do |new_attributes|
+          super(self.class.decode_super_ids(new_attributes))
+        end
+
+        self.send(:define_method, 'initialize') do |attributes={}, *options|
+          super(self.class.decode_super_ids(attributes), options)
+        end
+
+        super_id_names.each do |id_name|
+          self.send(:define_method, "#{id_name.to_s}") do |*args|
+            id = super(*args)
+            self.class.make_super(id.to_i, self.class.super_id_options) if id
+          end
+        end
+
         if super_id_names.include? :id or super_id_names.include? 'id'
-          class_eval <<-METHODS
-            def self.find(id)
+            define_singleton_method('find') do |id|
               case id
               when String
                 # FIXME: Don't assume we're using short_uid's
@@ -90,11 +85,10 @@ module SuperId
                 super(id)
               end
             end
-            
-            def to_param
+
+            self.send(:define_method, 'to_param') do
               id.to_s
             end
-          METHODS
         end
       end
     end
