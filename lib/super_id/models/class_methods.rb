@@ -44,7 +44,7 @@ module SuperId
           
           def self.decode_super_ids(attributes={})
             super_id_names.each do |super_id_name|
-              if attributes[super_id_name]
+              if attributes[super_id_name] && attributes[super_id_name].is_a?(String)
                 # FIXME: if the column is a foreign key, then use the super_id_options from the other class
                 #        otherwise, all the options has to be the same (ex: salt)
                 attributes[super_id_name] = decode_super(attributes[super_id_name], super_id_options)
@@ -63,6 +63,10 @@ module SuperId
           
           def update(attributes)
             super(self.class.decode_super_ids(attributes))
+          end
+
+          def assign_attributes(new_attributes)
+            super(self.class.decode_super_ids(new_attributes))
           end
         METHODS
         
