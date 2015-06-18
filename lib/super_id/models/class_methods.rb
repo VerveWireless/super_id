@@ -10,9 +10,10 @@ module SuperId
       #     use_super_id_for [:id, :other_id]
       #   Use specific algorithm (with options)
       #     use_super_id_for :id, as: :short_uid, salt: 'MySalt'
-      def use_super_id_for(id_name_or_names, options={})
+      def use_super_id_for(id_name_or_names, options={ salt: ''})
         super_id_names = id_name_or_names.respond_to?(:each) ? id_name_or_names : [id_name_or_names]
         super_id_type = options.delete(:as) || :short_uid
+        super_id_options = options
 
         define_singleton_method('super_id_names') do
           super_id_names
@@ -23,17 +24,16 @@ module SuperId
         end
 
         define_singleton_method('super_id_options') do
-          options
+          super_id_options
         end
 
         # FIXME: should be dynamic based on super_id_type
         define_singleton_method('make_super') do |id, options|
           if id
-            salt = options[:salt] || ''
-            SuperId::Types::IntAsShortUid.new(id.to_i, salt)
+            SuperId::Types::IntAsShortUid.new(id.to_i, options[:salt])
           end
         end
-        #
+
         # FIXME: should be dynamic based on super_id_type
         define_singleton_method('decode_super') do |str, options|
           if str
@@ -44,9 +44,15 @@ module SuperId
         define_singleton_method('decode_super_ids') do |attributes={}|
           super_id_names.each do |super_id_name|
             if attributes[super_id_name] && attributes[super_id_name].is_a?(String)
-              # FIXME: if the column is a foreign key, then use the super_id_options from the other class
-              #        otherwise, all the options has to be the same (ex: salt)
-              attributes[super_id_name] = decode_super(attributes[super_id_name], super_id_options)
+
+              # If attribute being updated is a foreign key (e.g. "template_id"),
+              # use the foreign key's class's salt instead of the self's salt
+              if self.reflect_on_all_associations.map(&:foreign_key).include?(super_id_name.to_s)
+                foreign_key_class = self.reflections.values.detect { |r| r.foreign_key == super_id_name.to_s }.klass
+                attributes[super_id_name] = decode_super(attributes[super_id_name], foreign_key_class.super_id_options)
+              else
+                attributes[super_id_name] = decode_super(attributes[super_id_name], super_id_options)
+              end
             end
           end
           attributes
@@ -71,7 +77,16 @@ module SuperId
         super_id_names.each do |id_name|
           self.send(:define_method, "#{id_name.to_s}") do |*args|
             id = super(*args)
-            self.class.make_super(id.to_i, self.class.super_id_options) if id
+
+            foreign_key_class = self.class.reflections.values.detect { |r| r.foreign_key == id_name.to_s }.try(:klass)
+
+            options = if foreign_key_class
+              foreign_key_class.super_id_options
+            else
+              self.class.super_id_options
+            end
+
+            self.class.make_super(id.to_i, options) if id
           end
         end
 
