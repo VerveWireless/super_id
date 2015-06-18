@@ -10,7 +10,7 @@ module SuperId
       #     use_super_id_for [:id, :other_id]
       #   Use specific algorithm (with options)
       #     use_super_id_for :id, as: :short_uid, salt: 'MySalt'
-      def use_super_id_for(id_name_or_names, options={ salt: ''})
+      def use_super_id_for(id_name_or_names, options={})
         super_id_names = id_name_or_names.respond_to?(:each) ? id_name_or_names : [id_name_or_names]
         super_id_type = options.delete(:as) || :short_uid
         super_id_options = options
@@ -30,7 +30,7 @@ module SuperId
         # FIXME: should be dynamic based on super_id_type
         define_singleton_method('make_super') do |id, options|
           if id
-            SuperId::Types::IntAsShortUid.new(id.to_i, options[:salt])
+            SuperId::Types::IntAsShortUid.new(id.to_i, options)
           end
         end
 

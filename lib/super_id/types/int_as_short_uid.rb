@@ -3,18 +3,24 @@ require 'hashids'
 module SuperId
   module Types
     class IntAsShortUid
-      def initialize(value, salt='')
+      DEFAULT_OPTIONS = {
+        salt: '',
+        min_hash_length: 0,
+        alphabet: Hashids::DEFAULT_ALPHABET
+      }
+
+      def initialize(value, options={})
         @value = value.to_i
-        @salt = salt
+        @options = DEFAULT_OPTIONS.merge(options)
       end
       
       def self.decode(str, options={})
-        salt = options[:salt] || ''
-        Hashids.new(salt).decode(str).first
+        options = DEFAULT_OPTIONS.merge(options)
+        Hashids.new(options[:salt], options[:min_hash_length], options[:alphabet]).decode(str).first
       end
       
       def encode
-        Hashids.new(@salt).encode(@value)
+        Hashids.new(@options[:salt], @options[:min_hash_length], @options[:alphabet]).encode(@value)
       end
       
       def to_s
