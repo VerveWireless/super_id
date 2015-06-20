@@ -74,6 +74,12 @@ module SuperId
           super(self.class.decode_super_ids(attributes), options)
         end
 
+        self.send(:define_method, 'attribute_change') do |attr|
+          super(attr).tap do |change|
+            change.each_with_index {|val, idx| change[idx] = val.to_i if val.is_a?(SuperId::Types::IntAsShortUid) }
+          end
+        end
+
         super_id_names.each do |id_name|
           self.send(:define_method, "#{id_name.to_s}") do |*args|
             id = super(*args)
