@@ -37,7 +37,7 @@ module SuperId
         # FIXME: should be dynamic based on super_id_type
         define_singleton_method('decode_super') do |str, options|
           if str
-            SuperId::Types::IntAsShortUid.decode(str, options)
+            make_super SuperId::Types::IntAsShortUid.decode(str, options), options
           end
         end
 
