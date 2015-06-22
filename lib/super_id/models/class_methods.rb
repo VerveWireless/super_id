@@ -58,20 +58,23 @@ module SuperId
           attributes
         end
 
-        define_singleton_method('create') do |attributes={}, options={}, &block|
-          super(decode_super_ids(attributes), options, &block)
+        define_singleton_method('create') do |*args|
+          args[0] = decode_super_ids(args[0]) if args[0]
+          super(*args)
         end
 
         self.send(:define_method, 'update') do |attributes|
           super(self.class.decode_super_ids(attributes))
         end
 
-        self.send(:define_method, 'assign_attributes') do |new_attributes|
-          super(self.class.decode_super_ids(new_attributes))
+        self.send(:define_method, 'assign_attributes') do |*args|
+          args[0] = self.class.decode_super_ids(args[0]) if args[0]
+          super(*args)
         end
 
-        self.send(:define_method, 'initialize') do |attributes={}, *options|
-          super(self.class.decode_super_ids(attributes), options)
+        self.send(:define_method, 'initialize') do |*args|
+          args[0] = self.class.decode_super_ids(args[0]) if args[0]
+          super(*args)
         end
 
         self.send(:define_method, 'attribute_change') do |attr|
