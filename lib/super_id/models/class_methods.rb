@@ -58,25 +58,30 @@ module SuperId
           attributes
         end
 
+        # OVERRIDE class method create(attributes = {}, &block)
         define_singleton_method('create') do |*args|
           args[0] = decode_super_ids(args[0]) if args[0]
           super(*args)
         end
 
+        # OVERRIDE instance method update(attributes)
         self.send(:define_method, 'update') do |attributes|
           super(self.class.decode_super_ids(attributes))
         end
 
+        # OVERRIDE instance method assign_attributes(new_attributes)
         self.send(:define_method, 'assign_attributes') do |*args|
           args[0] = self.class.decode_super_ids(args[0]) if args[0]
           super(*args)
         end
 
+        # OVERRIDE constructor initialize(attributes = nil, options = {})
         self.send(:define_method, 'initialize') do |*args|
           args[0] = self.class.decode_super_ids(args[0]) if args[0]
           super(*args)
         end
 
+        # OVERRIDE instance method attribute_change(attr)
         self.send(:define_method, 'attribute_change') do |attr|
           super(attr).tap do |change|
             change.each_with_index {|val, idx| change[idx] = val.to_i if val.is_a?(SuperId::Types::IntAsShortUid) }
