@@ -7,9 +7,9 @@ Gem::Specification.new do |spec|
   spec.name          = "super_id"
   spec.version       = SuperId::VERSION
   spec.authors       = ["Jeff Cooper"]
-  spec.email         = ["jeff@cuperman.net"]
-  spec.summary       = %q{Write a short summary. Required.}
-  spec.description   = %q{Write a longer description. Optional.}
+  spec.email         = ["jeff.cooper@vervemobile.com"]
+  spec.summary       = %q{Disguise your model ID’s when displayed in the UI or API}
+  #spec.description   = %q{Write a longer description. Optional.}
   spec.homepage      = ""
   spec.license       = "MIT"
 
