@@ -28,14 +28,14 @@ module SuperId
         end
 
         # FIXME: should be dynamic based on super_id_type
-        define_singleton_method('make_super') do |id, options|
+        define_singleton_method('make_super') do |id, options={}|
           if id
             SuperId::Types::IntAsShortUid.new(id.to_i, options)
           end
         end
 
         # FIXME: should be dynamic based on super_id_type
-        define_singleton_method('decode_super') do |str, options|
+        define_singleton_method('decode_super') do |str, options={}|
           if str
             make_super SuperId::Types::IntAsShortUid.decode(str, options), options
           end
