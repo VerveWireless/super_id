@@ -1,6 +1,6 @@
 # SuperId
 
-TODO: Write a gem description
+Disguise your model ID's when displayed in the UI or API
 
 ## Installation
 
@@ -25,14 +25,14 @@ In your model, you can use super id for the primary key
 ```ruby
 # app/models/flock.rb
 
-class Seagull < ActiveRecord::Base
+class Flock < ActiveRecord::Base
   has_many :seagulls
 
   use_super_id_for :id
 end
 ```
 
-You can also use super id for foreign keys:
+You can use super id for foreign keys too:
 
 ```ruby
 # app/models/seagull.rb
@@ -41,6 +41,54 @@ class Seagull < ActiveRecord::Base
   belongs_to :flock
 
   use_super_id_for [:id, :flock_id]
+end
+```
+
+## Options
+
+### :as
+
+SuperId potentially supports multiple encoding algorithms, but currently is limited to short uid.
+
+Optional
+Default: `:short_id`
+
+```ruby
+# app/models/flock.rb
+class Flock < ActiveRecord::Base
+  has_many :seagulls
+
+  use_super_id_for :id, as: :short_uid
+end
+```
+
+## Encoding Algorithms
+
+Each encoding algorithm may have options of its own, which can be added to the `use_super_id_for` arguments.
+
+### Short UID
+
+Options and defaults
+
+* `salt`: ''
+* `min_hash_length`: 0
+* `alphabet`: 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890'
+
+For example, you can use a different salt for each model, and it will encode equal id's differently:
+
+```ruby
+# app/models/flock.rb
+class Flock < ActiveRecord::Base
+  has_many :seagulls
+
+  use_super_id_for :id, as: :short_uid, salt: 'foo'
+end
+
+# app/models/seagull.rb
+class Seagull < ActiveRecord::Base
+  belongs_to :flock
+
+  use_super_id_for [:id, :flock_id], as: :short_uid, salt: 'bar'
 end
 ```
 
