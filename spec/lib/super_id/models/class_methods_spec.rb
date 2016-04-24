@@ -5,6 +5,13 @@ module SuperId
     describe ClassMethods do
       context 'use super id for primary key' do
         let(:klass) { Flock }
+        let(:salted_klass) do
+          Class.new(ActiveRecord::Base) do
+            use_super_id_for(:id, { salt: 'salty' })
+            self.table_name = Flock.table_name
+          end
+        end
+
         subject { klass.new }
         
         describe '::super_id_names' do
@@ -19,28 +26,98 @@ module SuperId
           it { expect(klass.super_id_options).to eql({}) }
         end
       
-        describe '::make_super' do
-          it { expect(klass.make_super(123)).to be_kind_of(SuperId::Types::IntAsShortUid) }
+        describe '::create_super_id' do
+          it { expect(klass.create_super_id('Mj3')).to be_kind_of(SuperId::Types::IntAsShortUid) }
+          it { expect(klass.create_super_id('Mj3').to_i).to eq(123) }
+          it { expect(klass.create_super_id(123).to_s).to eq('Mj3') }
+          it { expect(klass.create_super_id(nil)).to eq(nil) }
+          it { expect(klass.create_super_id(nil)).to eq(nil) }
+
+          context 'when salt' do
+            it { expect(salted_klass.decode_id('0zJ')).to eq(123) }
+          end
+
+          context 'when foreign salt' do
+            let(:fake_foreign_hash) { { foreign_id: salted_klass } }
+            before { allow(klass).to receive(:__foreign_key_map__).and_return(fake_foreign_hash) }
+
+            it { expect(klass.decode_id('0zJ', :foreign_id)).to eq(123) }
+          end
         end
       
-        describe '::decode_super' do
+        describe '::decode_id' do
           context 'when value is nil' do
-            it { expect(klass.decode_super(nil)).to eql(nil) }
+            it { expect(klass.decode_id(nil)).to eql(nil) }
           end
           
           context 'when value is a decodable' do
-            it { expect(klass.decode_super('Mj3')).to be_kind_of(SuperId::Types::IntAsShortUid) }
-            it { expect(klass.decode_super('Mj3')).to eq(123) }
+            it { expect(klass.decode_id('Mj3')).to eq(123) }
           end
           
           context 'when value is an arbitrary string' do
-            it { expect(klass.decode_super('F00BAR')).to eql(nil) }
+            it { expect(klass.decode_id('F00BAR')).to eql(nil) }
+          end
+
+          context 'when class has a salt' do
+            it { expect(salted_klass.decode_id('0zJ')).to eq(123) }
+          end
+
+          context 'when value is a foreign key with a different salt' do
+            let(:fake_foreign_hash) { { foreign_id: salted_klass } }
+            before { allow(klass).to receive(:__foreign_key_map__).and_return(fake_foreign_hash) }
+
+            it { expect(klass.decode_id('0zJ', :foreign_id)).to eq(123) }
           end
         end
       
         describe '::find' do
           subject { klass.create }
-          it { expect(klass.find(subject.to_param)).to eql(subject) }
+
+          context 'without salt' do
+            it { expect(klass.find(subject.to_param)).to eql(subject) }
+          end
+
+          context 'with salt' do
+            subject { salted_klass.create }
+            it { expect(salted_klass.find(subject.to_param)).to eql(subject) }
+          end
+        end
+
+        describe '::where' do
+          subject { klass.create() }
+
+          context 'when no super_id value' do
+            it { expect(klass.where(id: subject.id.to_i).to_a).to eql([subject]) }
+          end
+
+          context 'when single super_id value' do
+            it { expect(klass.where(id: subject.to_param).to_a).to eql([subject]) }
+          end
+
+          context 'when single, salted super_id value' do
+            subject { salted_klass.create }
+            it { expect(salted_klass.where(id: subject.to_param).to_a).to eql([subject]) }
+          end
+
+          context 'when multiple super_id values' do
+            subject { 2.times.map { klass.create() } }
+            it { expect(klass.where(id: [subject.first.to_param, subject.last.to_param]).to_a).to eql(subject) }
+          end
+
+          context 'when super_id value plus additional conditions' do
+            it { expect(klass.where(id: subject.to_param, created_at: subject.created_at).to_a).to eql([subject]) }
+          end
+
+          context 'when column is salted foreign key' do
+            let(:flock) { salted_klass.create }
+            subject { Seagull.create(flock_id: flock.id) }
+
+            it 'uses foreign key\'s salt to decode super_ids' do
+              subject
+              expect(Seagull.where(flock_id: flock.id.to_i).to_a).to eql([subject])
+            end
+          end
+
         end
       
         describe '#id' do
@@ -71,8 +148,8 @@ module SuperId
           it { expect(seagull.flock).to eql(flock) }
         end
         
-        describe '::decode_super_ids' do
-          it { expect(klass.decode_super_ids({ flock_id: flock.to_param })).to eq({ flock_id: flock.id }) }
+        describe '::decode_ids' do
+          it { expect(klass.decode_ids({ flock_id: flock.to_param })).to eq({ flock_id: flock.id }) }
         end
       
         describe '::create' do
