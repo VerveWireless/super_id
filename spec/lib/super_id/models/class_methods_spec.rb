@@ -118,6 +118,27 @@ module SuperId
             end
           end
 
+          context 'when called with SQL' do
+            let(:flock) { salted_klass.create }
+            subject { Seagull.create(flock_id: flock.id) }
+
+            context 'when no super_id value' do
+              it { expect(Seagull.where('id = ? AND flock_id = ?', subject.id.to_i, flock.id.to_i).to_a).to eql([subject]) }
+            end
+
+            context 'when super_id value' do
+              it { expect(Seagull.where('id = ?', subject.id.to_param).to_a).to eql([subject]) }
+            end
+
+            context 'when super_id is salted foreign key' do
+              before { allow(Flock).to receive(:super_id_options).and_return(salted_klass.super_id_options) }
+              it { expect(Seagull.where('id = ? AND flock_id = ?', subject.id.to_param, flock.id.to_param).to_a).to eql([subject]) }
+            end
+
+            context 'when no variables' do
+              it { expect(Seagull.where("id = #{subject.id.to_i}").to_a).to eql([subject]) }
+            end
+          end
         end
       
         describe '#id' do

@@ -115,8 +115,22 @@ module SuperId
           end
         end
 
-        define_singleton_method('where') do |args|
-          super(decode_ids(args))
+        define_singleton_method('where') do |*args|
+          if args.size == 1
+            case args.first
+            when Hash
+              super(decode_ids(*args))
+            else
+              super(*args)
+            end
+          else
+            args_map = args[0].scan(/(\w+) = \?/).flatten.map(&:to_sym).each_with_index.inject({}) { |hash, (element, index)| hash.merge Hash[index+1, element] }
+            args_map.delete_if { |key, value| !super_id_names.include?(value.to_sym) }
+            decoded_options = args_map.transform_values { |value| options_for_keys_class(value) }
+            decoded_args = args.map.with_index { |arg, index| (value = decoded_options[index]) ? decode_id(arg, nil, value) : arg }
+
+            super(*decoded_args)
+          end
         end
 
         if super_id_names.include? :id or super_id_names.include? 'id'
